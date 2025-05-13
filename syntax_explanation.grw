@@ -1,79 +1,95 @@
-# a phoneme is a bundle of arbitrary binary features
-# internally, each hponeme stores a feature if it is positive or negative, and
-# doesn't if it is unset
-# this means that new features that get defined after the definition of a
-# phoneme will be considered as unset
-# the F command defines a new feature
-F lateral
-F voiced
-F labial
-F syllabic
-F rounded
-F stressed
+# Define the languages to be used in this file
+languages:
+	ProtoIndoEuropean
+	PreProtoGermanic
 
-# the S command is used for defining new feature sets.
-# phonemes can only hold one of these features, and all others will be
-# considered negative while matching.
-# the application of any feature from the set via a plus in a phoneme
-# definition will take the place of the preexisting feature.
-# features in a feature set are refered to by `set.feature`.
-# using a feature from a feature set in the negative will match every other
-# feature from the set.
-# feature sets are unset by using an empty feature name.
-S type consonant vowel
-S place bilabial dental alveolar post_alveolar palatal palatovelar velar pharyngeal
-S manner nasal plosive fricative approximant tap trill
-S height close near_close close_mid mid open_mid near_open open
-S backness front near_front central near_back back
-S length short long overlong
+# Establish some basic distinctions
 
-# definitions let us define shorthand ways to refer to phonemes
-# these can be placed in bracket phoneme notation, which will base the 
-# resulting phoneme off of the definition
-D m [+consonant +place.bilabial +manner.nasal -lateral +voiced +short]
-D n [+consonant +place.alveolar +manner.nasal -lateral +voiced +short]
-D r [+consonant +place.alveolar +manner.trill -lateral +voiced +short]
-D l [+consonant +place.alveolar +manner.approximant +lateral +voiced +short]
-D u [+vowel +height.close +backness.back +rounded +syllabic +short]
+parameters:
+	type {consonant vowel}
+	length {short halflong long overlong}
 
-# a language is a stage that can be evolved to or from.
-# they must be defined using the L command before evolutions can be specified.
-L exampleA
-L exampleB
+features:
+	syllabic
+	stressed # we will only mark codas as stressed
 
-# an evolution from one language to another is defined by the application of
-# evolution rules.
-# you can specify these rule bundles by starting with the E command and ending
-# with the C command.
-# the first language is the start and the second is the result.
-E exampleA exampleB
+# Establish necessary information for consonants
 
-# rules are a group of target phonemes, a >, and then the output phonemes.
-# when it matches the target phonemes, it will replace it with the output phonemes
-# these rules desyllabize consonants by placing an epenthetic /u/ before them
-R [m +syllabic] > u m
-R [n +syllabic] > u n
-R [r +syllabic] > u r
-R [l +syllabic] > u l
+parameters:
+	place {bilabial dental alveolar post_alveolar palatal palatovelar laryngeal velar pharyngeal}
+	manner {nasal plosive fricative approximant tap trill}
+	pieLaryngeal {neutral aColoring oColoring}
 
-# while brackets define a concrete phoneme which considers unset features to 
-# be negative when matching, parenthesis define a feature matcher which will
-# not take unset features into account.
-# feature matchers may be prefixed with a number, in which case that number
-# will be defined as the phoneme it matches in that rule's output.
-# this rule also desyllabizes consonants by placing an epenthetic /u/ before them
-R 1(+consonant +syllabic) > u [1 -syllabic]
+features:
+	voiced
+	lateral
+	labialized
 
-# this rule merges the PIE palatovelar and velar plosives
-R 1(+place.palatovelar +manner.plosive) > [1 +place.velar]
+characters:
+	m [+type.consonant +place.bilabial +manner.nasal -lateral +voiced +length.short]
+	t [+type.consonant +place.alveolar +manner.plosive -lateral -voiced +length.short]
+	s [+type.consonant +place.alveolar +manner.fricative -lateral -voiced +length.short]
+	l [+type.consonant +place.alveolar +manner.approximant +lateral +voiced +length.short]
+	h₁ [+type.consonant +place.laryngeal +manner.fricative -lateral -voiced +length.short +pieLaryngeal.neutral]
+	h₂ [+type.consonant +place.laryngeal +manner.fricative -lateral -voiced +length.short +pieLaryngeal.aColoring]
+	h₃ [+type.consonant +place.laryngeal +manner.fricative -lateral -voiced +length.short +pieLaryngeal.oColoring]
+	w [+type.consonant +place.velar +manner.approximant +labialized -lateral -voiced +length.short]
+	
+# establish necessary information for vowels
 
-# rules can be followed by a backslash and then an environment descriptor.
-# this is a group of phonemes or feature matchers, then an underscore denoting
-# the target, and then another group of phonemes or feature matchers.
-# you can also use # to represent the end or start of a word, ? to represent
-# an arbitrary phoneme, and * to represent >=0 arbitrary phonemes
-# this rule removes word-final non-high short vowels after a nasal
-R (-height.high +length.short) > \ (+manner.nasal) _ #
+parameters:
+	height {close near_close close_mid mid open_mid near_open open}
+	backness {front near_front central near_back back}
 
-# end the evolution rules from one language to another with the C command
-C
+features:
+	rounded
+
+characters:
+	a [+type.vowel +height.open +backness.central -rounded +syllabic +length.short]
+	i [+type.vowel +height.close +backness.front -rounded +syllabic +length.short]
+	u [+type.vowel +height.close +backness.back +rounded +syllabic +length.short]
+	e [+type.vowel +height.close_mid +backness.front -rounded +syllabic +length.short]
+	o [+type.vowel +height.close_mid +backness.back +rounded +syllabic +length.short]
+	ə [+type.vowel +height.mid +backness.central -rounded +syllabic +length.short]
+
+# establish rules for evolution
+
+evolve ProtoIndoEuropean to PreProtoGermanic:
+	# Allophonic colouring of /e/ adjacent to laryngeal consonants
+	e > a / h₂ _
+	e > a / _ h₂
+	e > o / h₃ _
+	e > o / _ h₃
+
+	# Merging of PIE palatovelar and velar plosives
+	1(+place.palatovelar +manner.plosive) > [1 +manner.velar]
+
+	# Epenthesis of /u/ before syllabic sonorants
+	1(+type.consonant +syllabic) > u [1 -syllabic]
+
+	# Processing inter-dental epenthetic /s/ (idk exactly how this works)
+	(+place.dental) s (+place.dental) > [s +length.long]
+
+	# Shortening of geminate consonants after a consonant or a long vowel	
+	1(+type.consonant +length.long) > [1 +length.short] / (+type.consonant) _
+	1(+type.consonant +length.long) > [1 +length.short] / (+type.vowel +length.long) _
+
+	# Lengthening of word-final long vowels
+	1(+type.vowel +length.long) > [1 +length.overlong] / _ #
+
+	# Loss of laryngeals, phonemicising the allophones of /e/
+	(+place.laryngeal) > / # _ (+type.consonant)
+	1(+type.vowel) (+place.laryngeal) (+type.vowel) > [1 +length.overlong]
+	1(+type.vowel) (+place.laryngeal) > [1 +length.long]
+	(+place.laryngeal) > / _ (+type.vowel)
+
+	# Vocalization of remaining laryngeals
+	(+place.laryngeal) > ə
+
+	# Labialization of velars
+	1(+place.velar) w > [1 +labialized]
+
+	# Delabialization of labiovelars
+	1(+place.velar +labialized) > [1 -labialized] > _ u 
+	1(+place.velar +labialized) > [1 -labialized] > u _ 
+	1(+place.velar +labialized) > [1 -labialized] > _ t 
